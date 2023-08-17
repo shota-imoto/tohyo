@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	err := tohyo.InteractiveVote(os.Stdin)
+	_, err := tohyo.InteractiveVote(os.Stdin)
 	if err != nil {
 		panic(err)
 	}

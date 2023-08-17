@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -18,7 +19,7 @@ type Vote struct {
 	Voters     int
 	Right      int
 	ResultsMap ResultsMap
-	r          io.Reader
+	s          *bufio.Scanner
 }
 
 var right int = 2
@@ -29,33 +30,42 @@ func NewVote(r io.Reader) (Vote, error) {
 		return Vote{}, fmt.Errorf("NewVote: %w", err)
 	}
 	rm := candidates.NewResultsMap()
-
-	return Vote{Candidates: candidates, Voters: 0, Right: right, ResultsMap: rm, r: r}, nil
+	s := bufio.NewScanner(r)
+	return Vote{Candidates: candidates, Voters: 0, Right: right, ResultsMap: rm, s: s}, nil
 }
 
-func InteractiveVote(r io.Reader) error {
+func (v Vote) Scan() bool {
+	return v.s.Scan()
+}
+
+func (v Vote) Text() string {
+	return v.s.Text()
+}
+
+func InteractiveVote(r io.Reader) (Vote, error) {
 	fmt.Println("投票人数を入力してください")
 	v, err := NewVote(r)
 	if err != nil {
-		return fmt.Errorf("InteractiveVote: %w", err)
+		return Vote{}, fmt.Errorf("InteractiveVote: %w", err)
 	}
 
-	s := bufio.NewScanner(v.r)
-	s.Scan()
-	input := s.Text()
+	v.Scan()
+	input := v.Text()
+
 	i, ok := strconv.Atoi(input)
 	if ok != nil {
 		fmt.Println("数字以外が入力されたので処理を終了します")
-		return nil
+		return v, nil
 	}
 	v.Voters = i
 	fmt.Printf("人数テスト: %v", v)
 
 	fmt.Println("投票を開始します")
 	v.Start()
-	fmt.Println(v.ResultsMap)
 
-	return nil
+	fmt.Printf("結果:\n%s", v.ResultString())
+
+	return v, nil
 }
 
 func (v Vote) Start() error {
@@ -65,7 +75,6 @@ func (v Vote) Start() error {
 			v.Right,
 		)
 		fmt.Println("※投票順に重み付けされます")
-		s := bufio.NewScanner(v.r)
 
 		// 同じ候補に2回投票しないために、投票済み候補を保持するslice
 		voted := make([]string, v.Right)
@@ -73,8 +82,9 @@ func (v Vote) Start() error {
 		for j := 0; j < v.Right; j++ {
 			fmt.Printf("%d回目の投票権を行使します。\n", j+1)
 			fmt.Printf("候補を入力してEnterを押してください: %v\n", v.CandidatesString())
-			for s.Scan() {
-				t := s.Text()
+
+			for v.Scan() {
+				t := v.Text()
 
 				if slices.Contains(voted, t) {
 					fmt.Println("同じ候補に2回以上投票できません。未投票の候補を入力してください")
@@ -95,6 +105,7 @@ func (v Vote) Start() error {
 
 				break
 			}
+
 		}
 	}
 	return nil
@@ -102,6 +113,30 @@ func (v Vote) Start() error {
 
 func (v Vote) CandidatesString() string {
 	return v.Candidates.String()
+}
+
+func (v Vote) ResultString() string {
+	type SortedResult struct {
+		Key   string
+		Value int
+	}
+
+	sortedResults := make([]SortedResult, len(v.ResultsMap))
+
+	i := 0
+	for k, v := range v.ResultsMap {
+		sortedResults[i] = SortedResult{Key: k, Value: v}
+		i++
+	}
+	sort.Slice(sortedResults, func(i, j int) bool { return sortedResults[i].Value > sortedResults[j].Value })
+
+	str := ""
+
+	for i, r := range sortedResults {
+		str += fmt.Sprintf("%d位: %s -> %d\n", i+1, r.Key, r.Value)
+	}
+
+	return str
 }
 
 var ErrNotCandidate = errors.New("not candidate")
