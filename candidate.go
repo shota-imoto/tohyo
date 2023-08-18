@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+
+	"github.com/shota-imoto/tohyo/config"
 )
 
 type Candidate struct {
@@ -13,7 +15,12 @@ type Candidate struct {
 type Candidates []Candidate
 
 func LoadCandidates() (Candidates, error) {
-	f, err := os.Open("candidate.json")
+	cfg, err := config.New()
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := os.Open(cfg.CandidatePath)
 	if err != nil {
 		return nil, err
 	}
