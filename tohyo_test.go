@@ -9,6 +9,7 @@ import (
 )
 
 func TestInteractiveVote(t *testing.T) {
+	t.Setenv("CANDIDATE_PATH", "testdata/candidate.json")
 	tests := []struct {
 		name     string
 		testPath string
@@ -16,23 +17,23 @@ func TestInteractiveVote(t *testing.T) {
 	}{
 		{
 			name:     "two_voter",
-			testPath: "./testdata/two_voter.txt",
-			wants:    map[string]int{"buggy": 4, "jungle": 2, "cave": 0},
+			testPath: "./testdata/wants/two_voter.txt",
+			wants:    map[string]int{"gimuki": 4, "kamuki": 2, "chosonmuki": 0},
 		},
 		{
 			name:     "one_voter",
-			testPath: "./testdata/one_voter.txt",
-			wants:    map[string]int{"buggy": 2, "jungle": 1, "cave": 0},
+			testPath: "./testdata/wants/one_voter.txt",
+			wants:    map[string]int{"gimuki": 2, "kamuki": 1, "chosonmuki": 0},
 		},
 		{
 			name:     "same_candidate",
-			testPath: "./testdata/same_candidate.txt",
-			wants:    map[string]int{"buggy": 0, "jungle": 2, "cave": 0},
+			testPath: "./testdata/wants/same_candidate.txt",
+			wants:    map[string]int{"gimuki": 0, "kamuki": 2, "chosonmuki": 0},
 		},
 		{
 			name:     "not_exist_candidate",
-			testPath: "./testdata/not_exist_candidate.txt",
-			wants:    map[string]int{"buggy": 0, "jungle": 0, "cave": 0},
+			testPath: "./testdata/wants/not_exist_candidate.txt",
+			wants:    map[string]int{"gimuki": 0, "kamuki": 0, "chosonmuki": 0},
 		},
 	}
 
@@ -43,7 +44,7 @@ func TestInteractiveVote(t *testing.T) {
 			r, err := os.Open(tt.testPath)
 
 			if err != nil {
-				t.Errorf("TestInteractiveVote: %v", err)
+				t.Fatalf("TestInteractiveVote: %v", err)
 			}
 			defer r.Close()
 
