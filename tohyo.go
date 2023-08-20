@@ -17,21 +17,26 @@ type ResultsMap map[string]int
 type Vote struct {
 	Candidates Candidates
 	Voters     int
-	Right      int
+	Rights     []int
 	ResultsMap ResultsMap
 	s          *bufio.Scanner
 }
-
-var right int = 2
 
 func NewVote(r io.Reader) (Vote, error) {
 	candidates, err := LoadCandidates()
 	if err != nil {
 		return Vote{}, fmt.Errorf("NewVote: %w", err)
 	}
+
 	rm := candidates.NewResultsMap()
 	s := bufio.NewScanner(r)
-	return Vote{Candidates: candidates, Voters: 0, Right: right, ResultsMap: rm, s: s}, nil
+
+	rights, err := LoadRights()
+	if err != nil {
+		return Vote{}, fmt.Errorf("NewVote: %w", err)
+	}
+
+	return Vote{Candidates: candidates, Voters: 0, Rights: rights, ResultsMap: rm, s: s}, nil
 }
 
 func (v Vote) Scan() bool {
@@ -72,14 +77,14 @@ func (v Vote) Start() error {
 	for i := 0; i < v.Voters; i++ {
 		fmt.Printf(
 			"投票権は「%d」与えられます。いいと思った順に候補を入力してEnterを押してください。\n",
-			v.Right,
+			len(v.Rights),
 		)
 		fmt.Println("※投票順に重み付けされます")
 
 		// 同じ候補に2回投票しないために、投票済み候補を保持するslice
-		voted := make([]string, v.Right)
+		voted := make([]string, len(v.Rights))
 
-		for j := 0; j < v.Right; j++ {
+		for j, r := range v.Rights {
 			fmt.Printf("%d回目の投票権を行使します。\n", j+1)
 			fmt.Printf("候補を入力してEnterを押してください: %v\n", v.CandidatesString())
 
@@ -92,7 +97,7 @@ func (v Vote) Start() error {
 					continue
 				}
 
-				err := v.Count(t, j)
+				err := v.Count(t, r)
 
 				if err != nil {
 					if errors.Is(ErrNotCandidate, err) {
@@ -102,10 +107,8 @@ func (v Vote) Start() error {
 					return err
 				}
 				voted[j] = t
-
 				break
 			}
-
 		}
 	}
 	return nil
@@ -141,10 +144,10 @@ func (v Vote) ResultString() string {
 
 var ErrNotCandidate = errors.New("not candidate")
 
-func (v Vote) Count(str string, priority int) error {
+func (v Vote) Count(str string, weight int) error {
 	if _, ok := v.ResultsMap[str]; !ok {
 		return ErrNotCandidate
 	}
-	v.ResultsMap[str] += v.Right - priority
+	v.ResultsMap[str] += weight
 	return nil
 }

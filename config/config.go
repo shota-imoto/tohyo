@@ -4,6 +4,7 @@ import "github.com/caarlos0/env/v6"
 
 type Config struct {
 	CandidatePath string `env:"CANDIDATE_PATH" envDefault:"candidate.json"`
+	RightPath     string `env:"RIGHT_PATH" envDefault:"right.json"`
 }
 
 func New() (*Config, error) {
